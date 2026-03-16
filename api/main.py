@@ -7,7 +7,7 @@ All REST endpoints live here. Django handles /admin/ and static files.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import agenda, auth, hce, pacientes
+from api.routers import agenda, auth, documentos, hce, pacientes
 
 app = FastAPI(
     title="ENDOMED API",
@@ -29,6 +29,7 @@ app.include_router(auth.router)
 app.include_router(agenda.router)
 app.include_router(pacientes.router)
 app.include_router(hce.router)
+app.include_router(documentos.router)
 
 
 @app.get("/health/", tags=["system"])
