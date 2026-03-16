@@ -1,20 +1,23 @@
+import dj_database_url
 from decouple import config
 
 from .base import *  # noqa: F401, F403
 
+# Use the same Railway connection but a separate test database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("TEST_DB_NAME", default="endomed_test"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="postgres"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
+        **dj_database_url.config(
+            default=config(
+                "DATABASE_URL",
+                default="postgresql://postgres:postgres@localhost:5432/endomed_dev",
+            )
+        ),
+        "TEST": {"NAME": "endomed_test"},
     }
 }
 
 # Faster password hashing in tests
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
-# Suppress whitenoise static files warning in tests
+# Suppress whitenoise warning
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
