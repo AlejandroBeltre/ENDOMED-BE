@@ -4,10 +4,16 @@ Mounted at /api/ via config/asgi.py.
 All REST endpoints live here. Django handles /admin/ and static files.
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers import agenda, auth, documentos, hce, pacientes
+
+_extra = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+_origins = [o.strip() for o in _extra.split(",") if o.strip()]
+CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] + _origins
 
 app = FastAPI(
     title="ENDOMED API",
@@ -19,7 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
