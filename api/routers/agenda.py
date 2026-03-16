@@ -4,7 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from api.dependencies import get_current_user
-from api.schemas.agenda import CitaCreateRequest, CitaResponse, EstadoCitaRequest, TipoConsultaResponse
+from api.schemas.agenda import (
+    CitaCreateRequest,
+    CitaResponse,
+    EstadoCitaRequest,
+    TipoConsultaResponse,
+)
 from apps.agenda.models import TipoConsulta as TipoConsultaModel
 from apps.agenda.services import (
     create_cita,
