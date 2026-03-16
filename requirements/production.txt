@@ -1,4 +1,2 @@
 -r base.txt
 gunicorn==23.0.0
-weasyprint==62.3
-cloudinary==1.42.2
