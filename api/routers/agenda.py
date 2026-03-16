@@ -4,7 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from api.dependencies import get_current_user
-from api.schemas.agenda import CitaCreateRequest, CitaResponse, EstadoCitaRequest
+from api.schemas.agenda import CitaCreateRequest, CitaResponse, EstadoCitaRequest, TipoConsultaResponse
+from apps.agenda.models import TipoConsulta as TipoConsultaModel
 from apps.agenda.services import (
     create_cita,
     get_cita,
@@ -14,6 +15,11 @@ from apps.agenda.services import (
 )
 
 router = APIRouter(prefix="/agenda", tags=["agenda"])
+
+
+@router.get("/tipos-consulta/", response_model=list[TipoConsultaResponse])
+def list_tipos_consulta(user=Depends(get_current_user)):
+    return list(TipoConsultaModel.objects.all())
 
 
 @router.get("/hoy/", response_model=list[CitaResponse])
