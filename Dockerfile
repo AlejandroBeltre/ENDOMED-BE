@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements/production.txt
 # Copy source
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8080
 
 # migrate → collectstatic → gunicorn
 # $PORT is injected by Railway at runtime
@@ -30,7 +30,7 @@ CMD ["sh", "-c", \
       python manage.py collectstatic --noinput && \
       gunicorn config.asgi:application \
         --worker-class uvicorn.workers.UvicornWorker \
-        --bind 0.0.0.0:${PORT:-8000} \
+        --bind 0.0.0.0:${PORT:-8080} \
         --workers 2 \
         --timeout 120 \
         --access-logfile -"]
