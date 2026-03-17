@@ -61,3 +61,17 @@ class CitaResponse(BaseModel):
 
 class EstadoCitaRequest(BaseModel):
     estado: str  # pendiente | confirmada | cancelada | completada
+
+
+class TipoConsultaCreateRequest(BaseModel):
+    nombre: str
+    duracion_min: int
+    tarifa_rd: Decimal
+    color_hex: str
+
+
+class TipoConsultaUpdateRequest(BaseModel):
+    nombre: str | None = None
+    duracion_min: int | None = None
+    tarifa_rd: Decimal | None = None
+    color_hex: str | None = None

@@ -9,7 +9,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import agenda, analitica, auth, documentos, finanzas, hce, pacientes
+from api.routers import agenda, analitica, auth, documentos, finanzas, hce, pacientes, telemedicina
 
 _extra = os.environ.get("CORS_ALLOWED_ORIGINS", "")
 _origins = [o.strip() for o in _extra.split(",") if o.strip()]
@@ -38,6 +38,7 @@ app.include_router(hce.router)
 app.include_router(documentos.router)
 app.include_router(finanzas.router)
 app.include_router(analitica.router)
+app.include_router(telemedicina.router)
 
 
 @app.get("/health/", tags=["system"])

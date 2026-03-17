@@ -3,20 +3,24 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, require_role
 from api.schemas.agenda import (
     CitaCreateRequest,
     CitaResponse,
     EstadoCitaRequest,
+    TipoConsultaCreateRequest,
     TipoConsultaResponse,
+    TipoConsultaUpdateRequest,
 )
 from apps.agenda.models import TipoConsulta as TipoConsultaModel
 from apps.agenda.services import (
     create_cita,
+    create_tipo_consulta,
     get_cita,
     get_citas_hoy,
     list_citas,
     update_cita_estado,
+    update_tipo_consulta,
 )
 
 router = APIRouter(prefix="/agenda", tags=["agenda"])
@@ -25,6 +29,27 @@ router = APIRouter(prefix="/agenda", tags=["agenda"])
 @router.get("/tipos-consulta/", response_model=list[TipoConsultaResponse])
 def list_tipos_consulta(user=Depends(get_current_user)):
     return list(TipoConsultaModel.objects.all())
+
+
+@router.post(
+    "/tipos-consulta/",
+    response_model=TipoConsultaResponse,
+    status_code=201,
+)
+def create_tipo_consulta_route(
+    body: TipoConsultaCreateRequest,
+    user=Depends(require_role("doctora")),
+):
+    return create_tipo_consulta(body.model_dump())
+
+
+@router.patch("/tipos-consulta/{tipo_id}/", response_model=TipoConsultaResponse)
+def update_tipo_consulta_route(
+    tipo_id: UUID,
+    body: TipoConsultaUpdateRequest,
+    user=Depends(require_role("doctora")),
+):
+    return update_tipo_consulta(tipo_id, body.model_dump(exclude_none=True))
 
 
 @router.get("/hoy/", response_model=list[CitaResponse])

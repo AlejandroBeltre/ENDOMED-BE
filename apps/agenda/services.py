@@ -3,9 +3,42 @@ from uuid import UUID
 
 from django.utils import timezone as tz
 
-from apps.agenda.models import Cita
+from apps.agenda.models import Cita, TipoConsulta
 from apps.authentication.models import User
 from apps.authentication.services import get_allowed_sede_ids, validate_sede_access
+
+
+def create_tipo_consulta(data: dict) -> TipoConsulta:
+    from fastapi import HTTPException
+
+    if TipoConsulta.objects.filter(nombre__iexact=data["nombre"]).exists():
+        raise HTTPException(400, "Ya existe un tipo de consulta con ese nombre.")
+    return TipoConsulta.objects.create(
+        nombre=data["nombre"],
+        duracion_min=data["duracion_min"],
+        tarifa_rd=data["tarifa_rd"],
+        color_hex=data["color_hex"],
+    )
+
+
+def update_tipo_consulta(tipo_id: UUID, data: dict) -> TipoConsulta:
+    from fastapi import HTTPException
+
+    try:
+        tipo = TipoConsulta.objects.get(id=tipo_id)
+    except TipoConsulta.DoesNotExist:
+        raise HTTPException(404, "Tipo de consulta no encontrado.")
+
+    update_fields = []
+    for field in ("nombre", "duracion_min", "tarifa_rd", "color_hex"):
+        if field in data and data[field] is not None:
+            setattr(tipo, field, data[field])
+            update_fields.append(field)
+
+    if update_fields:
+        update_fields.append("updated_at")
+        tipo.save(update_fields=update_fields)
+    return tipo
 
 
 def _active_citas():
@@ -58,7 +91,7 @@ def create_cita(data: dict, user: User) -> Cita:
 
         raise HTTPException(403, "No tiene acceso a esa sede.")
 
-    return Cita.objects.create(
+    cita = Cita.objects.create(
         paciente_id=data["paciente_id"],
         sede_id=data["sede_id"],
         profesional_id=data["profesional_id"],
@@ -68,6 +101,15 @@ def create_cita(data: dict, user: User) -> Cita:
         modalidad=data.get("modalidad", Cita.Modalidad.PRESENCIAL),
         notas_previas=data.get("notas_previas", ""),
     )
+
+    # Schedule WhatsApp + email reminders asynchronously
+    try:
+        from tasks.recordatorios import programar_recordatorios_cita
+        programar_recordatorios_cita(cita.id)
+    except Exception:
+        pass  # Celery may be unavailable in dev — don't fail the request
+
+    return cita
 
 
 def get_cita(cita_id: UUID, user: User) -> Cita:
@@ -94,4 +136,12 @@ def update_cita_estado(cita_id: UUID, estado: str, user: User) -> Cita:
     cita = get_cita(cita_id, user)
     cita.estado = estado
     cita.save(update_fields=["estado", "updated_at"])
+
+    if estado == Cita.Estado.CONFIRMADA:
+        try:
+            from tasks.recordatorios import programar_recordatorios_cita
+            programar_recordatorios_cita(cita.id)
+        except Exception:
+            pass
+
     return cita
