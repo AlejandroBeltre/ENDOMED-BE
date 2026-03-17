@@ -277,43 +277,49 @@ class Command(BaseCommand):
 
         if options["reset"]:
             self.stdout.write("  Eliminando datos demo existentes...")
-            pac_ids = [p["id"] for p in PACIENTES]
-            Paciente.objects.filter(id__in=pac_ids).delete()
-            TipoConsulta.objects.filter(id__in=list(_TC.values())).delete()
-            UserSede.objects.filter(user_id__in=[_U1, _U2]).delete()
-            User.objects.filter(id__in=[_U1, _U2]).delete()
-            Sede.objects.filter(id__in=[_S1, _S2, _S3]).delete()
+            cedulas = [p["cedula"] for p in PACIENTES]
+            Paciente.objects.filter(cedula__in=cedulas).delete()
+            TipoConsulta.objects.filter(
+                nombre__in=[t["nombre"] for t in TIPOS_CONSULTA]
+            ).delete()
+            demo_emails = ["doctora@endomed.com", "secretaria@endomed.com"]
+            UserSede.objects.filter(user__email__in=demo_emails).delete()
+            User.objects.filter(email__in=demo_emails).delete()
+            Sede.objects.filter(nombre__in=[s["nombre"] for s in SEDES]).delete()
             Inventario.objects.filter(
                 nombre_producto__in=[i["nombre_producto"] for i in INVENTARIO]
             ).delete()
 
         # ── Sedes ──────────────────────────────────────────────────────────────
-        sedes: dict[uuid.UUID, Sede] = {}
+        # Look up by nombre (natural key) — prod DB may have different UUIDs
+        sedes: dict[str, Sede] = {}
         for data in SEDES:
             sede, created = Sede.objects.get_or_create(
-                id=data["id"],
-                defaults={"nombre": data["nombre"], "ciudad": data["ciudad"]},
+                nombre=data["nombre"],
+                defaults={"ciudad": data["ciudad"]},
             )
-            sedes[sede.id] = sede
+            sedes[sede.nombre] = sede
             self.stdout.write(f"  {'[+]' if created else '[ ]'} Sede: {sede.nombre}")
 
-        sede_demo = sedes[_S3]  # Unidad Endometabólica is the primary demo sede
+        sede_demo = sedes["Unidad Endometabólica"]
 
         # ── Tipos de consulta ──────────────────────────────────────────────────
+        # Look up by nombre — prod DB may already have these with different UUIDs
         tipos: dict[str, TipoConsulta] = {}
         for data in TIPOS_CONSULTA:
-            tc_id = data.pop("id")
-            tc, created = TipoConsulta.objects.get_or_create(id=tc_id, defaults=data)
+            data.pop("id")
+            tc, created = TipoConsulta.objects.get_or_create(
+                nombre=data["nombre"], defaults=data
+            )
             tipos[tc.nombre] = tc
-            data["id"] = tc_id
             self.stdout.write(
                 f"  {'[+]' if created else '[ ]'} TipoConsulta: {tc.nombre}"
             )
 
         # ── Usuarios ───────────────────────────────────────────────────────────
-        if not User.objects.filter(id=_U1).exists():
+        # Look up by email — prod DB may have different UUIDs
+        if not User.objects.filter(email="doctora@endomed.com").exists():
             doctora = User.objects.create_user(
-                id=_U1,
                 email="doctora@endomed.com",
                 password="Demo2026!",
                 nombre="Elizabeth",
@@ -324,7 +330,7 @@ class Command(BaseCommand):
             )
             created = True
         else:
-            doctora = User.objects.get(id=_U1)
+            doctora = User.objects.get(email="doctora@endomed.com")
             created = False
         self.stdout.write(f"  {'[+]' if created else '[ ]'} User: {doctora.email}")
 
@@ -332,12 +338,11 @@ class Command(BaseCommand):
             UserSede.objects.get_or_create(
                 user=doctora,
                 sede=sede,
-                defaults={"is_primary": sede.id == _S3},
+                defaults={"is_primary": sede.nombre == "Unidad Endometabólica"},
             )
 
-        if not User.objects.filter(id=_U2).exists():
+        if not User.objects.filter(email="secretaria@endomed.com").exists():
             secretaria = User.objects.create_user(
-                id=_U2,
                 email="secretaria@endomed.com",
                 password="Demo2026!",
                 nombre="Laura",
@@ -346,7 +351,7 @@ class Command(BaseCommand):
             )
             created = True
         else:
-            secretaria = User.objects.get(id=_U2)
+            secretaria = User.objects.get(email="secretaria@endomed.com")
             created = False
         self.stdout.write(f"  {'[+]' if created else '[ ]'} User: {secretaria.email}")
 
@@ -359,13 +364,12 @@ class Command(BaseCommand):
         # ── Pacientes ──────────────────────────────────────────────────────────
         pacientes: list[Paciente] = []
         for i, data in enumerate(PACIENTES):
-            pac_id = data.pop("id")
-            sede = sedes[_S2] if i >= 7 else sede_demo
-            pac, created = Paciente.objects.get_or_create(
-                id=pac_id,
+            data.pop("id")
+            sede = sedes["San Francisco de Macorís"] if i >= 7 else sede_demo
+            pac, _ = Paciente.objects.get_or_create(
+                cedula=data["cedula"],
                 defaults={**data, "sede": sede},
             )
-            data["id"] = pac_id
             pacientes.append(pac)
         self.stdout.write(f"  [+] {len(pacientes)} pacientes")
 
@@ -424,10 +428,7 @@ class Command(BaseCommand):
             pac = pacientes[pac_idx]
             cita = completed_citas[i]
 
-            hce, _ = HistoriaClinica.objects.get_or_create(
-                paciente=pac,
-                defaults={"medico_responsable": doctora},
-            )
+            hce, _ = HistoriaClinica.objects.get_or_create(paciente=pac)
 
             from apps.hce.models import Consulta
 
@@ -435,11 +436,12 @@ class Command(BaseCommand):
                 hce=hce,
                 fecha_hora=cita.fecha_hora,
                 defaults={
-                    "medico": doctora,
+                    "cita": cita,
+                    "created_by": doctora,
                     "tipo_consulta": cita.tipo_consulta,
                     "motivo_consulta": "Control periódico.",
-                    "examen_fisico": "Paciente en buen estado general.",
-                    "plan_tratamiento": "Continuar tratamiento actual. Próximo control en 4 semanas.",
+                    "examen_fisico": {"nota": "Paciente en buen estado general."},
+                    "plan_terapeutico": "Continuar tratamiento actual. Próximo control en 4 semanas.",
                 },
             )
 
@@ -449,10 +451,10 @@ class Command(BaseCommand):
                     defaults={
                         "peso_kg": Decimal(str(peso)),
                         "talla_cm": Decimal(str(talla)),
-                        "presion_sistolica": ps,
-                        "presion_diastolica": pd,
-                        "frecuencia_cardiaca": 72,
-                        "temperatura_c": Decimal("36.6"),
+                        "pa_sistolica": ps,
+                        "pa_diastolica": pd,
+                        "fc": 72,
+                        "temperatura": Decimal("36.6"),
                     },
                 )
                 DiagnosticoConsulta.objects.get_or_create(

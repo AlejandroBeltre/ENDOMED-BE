@@ -113,4 +113,4 @@ Release command: `python manage.py migrate --no-input`
 Required environment variables: `DATABASE_URL` `SECRET_KEY` `REDIS_URL`
 `CLOUDINARY_URL` `SENDGRID_API_KEY` `TWILIO_ACCOUNT_SID` `TWILIO_AUTH_TOKEN`
 `TWILIO_WHATSAPP_FROM` `DJANGO_SETTINGS_MODULE=config.settings.production`
-`SECURE_COOKIES=True` `CORS_ALLOWED_ORIGINS=https://app.endomed.app`
+`SECURE_COOKIES=True` `CORS_ALLOWED_ORIGINS=https://endomed.up.railway.app`
