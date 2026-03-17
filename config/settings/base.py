@@ -28,7 +28,17 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
+    "django_celery_beat",
 ]
+
+# ── Celery ────────────────────────────────────────────────────────────────────
+CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "America/Santo_Domingo"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 LOCAL_APPS = [
     "apps.authentication",
@@ -36,6 +46,8 @@ LOCAL_APPS = [
     "apps.pacientes",
     "apps.hce",
     "apps.documentos",
+    "apps.finanzas",
+    "apps.analitica",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

@@ -110,6 +110,34 @@ class SignosVitales(models.Model):
         return f"Signos Vitales — {self.consulta}"
 
 
+class DiagnosticoConsulta(models.Model):
+    class Tipo(models.TextChoices):
+        PRINCIPAL = "principal", "Principal"
+        SECUNDARIO = "secundario", "Secundario"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    consulta = models.ForeignKey(
+        Consulta, on_delete=models.CASCADE, related_name="diagnosticos"
+    )
+    codigo_cie10 = models.CharField(max_length=10)
+    descripcion = models.CharField(max_length=300)
+    tipo = models.CharField(max_length=20, choices=Tipo.choices, default=Tipo.PRINCIPAL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "diagnosticos_consulta"
+        verbose_name = "Diagnóstico de Consulta"
+        verbose_name_plural = "Diagnósticos de Consulta"
+        ordering = ["tipo", "codigo_cie10"]
+        indexes = [
+            models.Index(fields=["codigo_cie10"]),
+            models.Index(fields=["consulta", "tipo"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.codigo_cie10} — {self.descripcion} ({self.tipo})"
+
+
 class MedicamentoPrescrito(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     consulta = models.ForeignKey(
