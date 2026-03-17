@@ -31,6 +31,16 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
 ]
 
+# ── Cache (Redis) ─────────────────────────────────────────────────────────────
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config("REDIS_URL", default="redis://localhost:6379/1"),
+        "TIMEOUT": 300,  # 5 min default; per-call ttl overrides this
+        "OPTIONS": {"db": "1"},
+    }
+}
+
 # ── Celery ────────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")

@@ -68,6 +68,7 @@ def list_facturas(
     qs = (
         _active_facturas()
         .select_related("paciente", "sede", "cita__tipo_consulta", "created_by")
+        .prefetch_related("pagos")
         .filter(sede_id__in=allowed)
     )
     if sede_id:

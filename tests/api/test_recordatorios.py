@@ -1,17 +1,18 @@
 """Tests for reminder scheduling and task logic."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from django.utils import timezone as tz
 
+import pytest
+from django.utils import timezone as tz
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
 def cita_futura(transactional_db, paciente, sede, doctora, tipo_consulta):
-    from apps.agenda.models import Cita
     from datetime import timedelta
+
+    from apps.agenda.models import Cita
 
     return Cita.objects.create(
         paciente=paciente,
@@ -32,8 +33,10 @@ def test_programar_crea_recordatorios(cita_futura):
     from apps.agenda.models import Recordatorio
     from tasks.recordatorios import programar_recordatorios_cita
 
-    with patch("tasks.recordatorios.enviar_recordatorio_whatsapp") as mock_wp, \
-         patch("tasks.recordatorios.enviar_recordatorio_email") as mock_em:
+    with (
+        patch("tasks.recordatorios.enviar_recordatorio_whatsapp") as mock_wp,
+        patch("tasks.recordatorios.enviar_recordatorio_email") as mock_em,
+    ):
         mock_wp.apply_async = MagicMock()
         mock_em.apply_async = MagicMock()
         programar_recordatorios_cita(cita_futura.id)
@@ -47,8 +50,10 @@ def test_programar_idempotente(cita_futura):
     from apps.agenda.models import Recordatorio
     from tasks.recordatorios import programar_recordatorios_cita
 
-    with patch("tasks.recordatorios.enviar_recordatorio_whatsapp") as mock_wp, \
-         patch("tasks.recordatorios.enviar_recordatorio_email") as mock_em:
+    with (
+        patch("tasks.recordatorios.enviar_recordatorio_whatsapp") as mock_wp,
+        patch("tasks.recordatorios.enviar_recordatorio_email") as mock_em,
+    ):
         mock_wp.apply_async = MagicMock()
         mock_em.apply_async = MagicMock()
         programar_recordatorios_cita(cita_futura.id)
@@ -58,9 +63,12 @@ def test_programar_idempotente(cita_futura):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_programar_skips_past_cita(transactional_db, paciente, sede, doctora, tipo_consulta):
-    from apps.agenda.models import Cita, Recordatorio
+def test_programar_skips_past_cita(
+    transactional_db, paciente, sede, doctora, tipo_consulta
+):
     from datetime import timedelta
+
+    from apps.agenda.models import Cita, Recordatorio
     from tasks.recordatorios import programar_recordatorios_cita
 
     cita = Cita.objects.create(
@@ -123,7 +131,9 @@ def test_enviar_whatsapp_marks_sent(transactional_db, cita_futura):
         result = enviar_recordatorio_whatsapp(str(cita_futura.id), 24)
 
     assert result == "sent"
-    rec = Recordatorio.objects.get(cita=cita_futura, canal="whatsapp", anticipacion_horas=24)
+    rec = Recordatorio.objects.get(
+        cita=cita_futura, canal="whatsapp", anticipacion_horas=24
+    )
     assert rec.estado == Recordatorio.Estado.ENVIADO
 
 
@@ -148,7 +158,9 @@ def test_enviar_email_marks_sent(transactional_db, cita_futura):
         result = enviar_recordatorio_email(str(cita_futura.id), 24)
 
     assert result == "sent"
-    rec = Recordatorio.objects.get(cita=cita_futura, canal="email", anticipacion_horas=24)
+    rec = Recordatorio.objects.get(
+        cita=cita_futura, canal="email", anticipacion_horas=24
+    )
     assert rec.estado == Recordatorio.Estado.ENVIADO
 
 

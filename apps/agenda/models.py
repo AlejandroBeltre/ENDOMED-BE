@@ -85,7 +85,9 @@ class Recordatorio(models.Model):
         FALLIDO = "fallido", "Fallido"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    cita = models.ForeignKey(Cita, on_delete=models.CASCADE, related_name="recordatorios")
+    cita = models.ForeignKey(
+        Cita, on_delete=models.CASCADE, related_name="recordatorios"
+    )
     canal = models.CharField(max_length=20, choices=Canal.choices)
     anticipacion_horas = models.PositiveSmallIntegerField()  # 24 or 2
     estado = models.CharField(

@@ -11,11 +11,19 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
+from django.core.cache import cache
 from django.db.models import Count, Sum
 from django.utils import timezone as tz
 
 from apps.authentication.models import User
 from apps.authentication.services import get_allowed_sede_ids
+
+_CACHE_TTL = 30 * 60  # 30 minutes
+
+
+def _cache_key(*parts: object) -> str:
+    return "analitica:" + ":".join(str(p) for p in parts)
+
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +43,11 @@ def _date_range(meses: int | None) -> tuple[date | None, date | None]:
 
 
 def get_resumen(user: User, sede_id: UUID | None) -> dict:
+    key = _cache_key("resumen", user.id, sede_id)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
     from apps.agenda.models import Cita
     from apps.finanzas.models import Factura
     from apps.pacientes.models import Paciente
@@ -64,12 +77,14 @@ def get_resumen(user: User, sede_id: UUID | None) -> dict:
         fecha_hora__date=today, estado__in=["pendiente", "confirmada"]
     ).count()
 
-    return {
+    result = {
         "total_pacientes": total_pacientes,
         "consultas_este_mes": consultas_mes,
         "ingresos_este_mes": ingresos_mes,
         "citas_hoy": citas_hoy,
     }
+    cache.set(key, result, _CACHE_TTL)
+    return result
 
 
 # ── diagnósticos ──────────────────────────────────────────────────────────────
@@ -80,6 +95,11 @@ def get_diagnosticos(
     sede_id: UUID | None,
     meses: int | None,
 ) -> list[dict]:
+    key = _cache_key("diagnosticos", user.id, sede_id, meses)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
     from apps.hce.models import DiagnosticoConsulta
 
     allowed = get_allowed_sede_ids(user)
@@ -99,17 +119,23 @@ def get_diagnosticos(
     if desde:
         qs = qs.filter(consulta__fecha_hora__date__gte=desde)
 
-    return list(
+    result = list(
         qs.values("codigo_cie10", "descripcion")
         .annotate(frecuencia=Count("id"))
         .order_by("-frecuencia")[:10]
     )
+    cache.set(key, result, _CACHE_TTL)
+    return result
 
 
 # ── demografía ────────────────────────────────────────────────────────────────
 
 
 def get_demografia(user: User, sede_id: UUID | None) -> list[dict]:
+    key = _cache_key("demografia", user.id, sede_id)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
 
     from apps.pacientes.models import Paciente
 
@@ -143,6 +169,7 @@ def get_demografia(user: User, sede_id: UUID | None) -> list[dict]:
                 "total": masculino + femenino,
             }
         )
+    cache.set(key, rows, _CACHE_TTL)
     return rows
 
 
@@ -155,6 +182,11 @@ def get_prevalencia(
     patologia: str | None,
     meses: int | None,
 ) -> list[dict]:
+    key = _cache_key("prevalencia", user.id, sede_id, patologia, meses)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
     from apps.hce.models import DiagnosticoConsulta
 
     allowed = get_allowed_sede_ids(user)
@@ -174,12 +206,14 @@ def get_prevalencia(
 
     from django.db.models.functions import TruncMonth
 
-    return list(
+    result = list(
         qs.annotate(mes=TruncMonth("consulta__fecha_hora"))
         .values("mes", "codigo_cie10", "descripcion")
         .annotate(frecuencia=Count("id"))
         .order_by("mes", "-frecuencia")
     )
+    cache.set(key, result, _CACHE_TTL)
+    return result
 
 
 # ── rendimiento ───────────────────────────────────────────────────────────────
@@ -190,6 +224,11 @@ def get_rendimiento(
     sede_id: UUID | None,
     meses: int | None,
 ) -> list[dict]:
+    key = _cache_key("rendimiento", user.id, sede_id, meses)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
     from apps.agenda.models import Cita
     from apps.finanzas.models import Factura
 
@@ -225,7 +264,7 @@ def get_rendimiento(
     }
 
     tipos = set(vol_por_tipo) | set(ing_por_tipo)
-    return [
+    result = [
         {
             "tipo_consulta": t,
             "volumen": vol_por_tipo.get(t, 0),
@@ -233,6 +272,8 @@ def get_rendimiento(
         }
         for t in sorted(tipos)
     ]
+    cache.set(key, result, _CACHE_TTL)
+    return result
 
 
 # ── exportar CSV ──────────────────────────────────────────────────────────────

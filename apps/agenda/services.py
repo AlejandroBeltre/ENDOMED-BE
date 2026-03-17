@@ -49,7 +49,7 @@ def get_citas_hoy(user: User, sede_id: UUID | None, profesional_id: UUID | None)
     today = tz.localdate()
     qs = (
         _active_citas()
-        .select_related("paciente", "profesional", "tipo_consulta")
+        .select_related("paciente", "profesional", "tipo_consulta", "sede")
         .filter(fecha_hora__date=today)
     )
 
@@ -70,7 +70,9 @@ def list_citas(
     sede_id: UUID | None,
     profesional_id: UUID | None,
 ):
-    qs = _active_citas().select_related("paciente", "profesional", "tipo_consulta")
+    qs = _active_citas().select_related(
+        "paciente", "profesional", "tipo_consulta", "sede"
+    )
 
     allowed = get_allowed_sede_ids(user)
     qs = qs.filter(sede_id__in=allowed)
@@ -105,6 +107,7 @@ def create_cita(data: dict, user: User) -> Cita:
     # Schedule WhatsApp + email reminders asynchronously
     try:
         from tasks.recordatorios import programar_recordatorios_cita
+
         programar_recordatorios_cita(cita.id)
     except Exception:
         pass  # Celery may be unavailable in dev — don't fail the request
@@ -119,7 +122,7 @@ def get_cita(cita_id: UUID, user: User) -> Cita:
     try:
         return (
             _active_citas()
-            .select_related("paciente", "profesional", "tipo_consulta")
+            .select_related("paciente", "profesional", "tipo_consulta", "sede")
             .get(id=cita_id, sede_id__in=allowed)
         )
     except Cita.DoesNotExist:
@@ -140,6 +143,7 @@ def update_cita_estado(cita_id: UUID, estado: str, user: User) -> Cita:
     if estado == Cita.Estado.CONFIRMADA:
         try:
             from tasks.recordatorios import programar_recordatorios_cita
+
             programar_recordatorios_cita(cita.id)
         except Exception:
             pass

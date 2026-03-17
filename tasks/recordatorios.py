@@ -13,7 +13,6 @@ from datetime import timedelta
 from uuid import UUID
 
 from celery import shared_task
-from django.conf import settings
 from django.utils import timezone as tz
 
 logger = logging.getLogger(__name__)
@@ -32,7 +31,9 @@ def _get_cita(cita_id: UUID):
     )
 
 
-def _mark_recordatorio(cita_id: UUID, canal: str, anticipacion_horas: int, *, ok: bool, error: str = "") -> None:
+def _mark_recordatorio(
+    cita_id: UUID, canal: str, anticipacion_horas: int, *, ok: bool, error: str = ""
+) -> None:
     from apps.agenda.models import Recordatorio
 
     rec = Recordatorio.objects.filter(
@@ -93,14 +94,18 @@ def _format_message(cita, anticipacion_horas: int) -> str:
 # ── main tasks ────────────────────────────────────────────────────────────────
 
 
-@shared_task(name="tasks.recordatorios.enviar_recordatorio_whatsapp", bind=True, max_retries=2)
+@shared_task(
+    name="tasks.recordatorios.enviar_recordatorio_whatsapp", bind=True, max_retries=2
+)
 def enviar_recordatorio_whatsapp(self, cita_id: str, anticipacion_horas: int) -> str:
     """Send a WhatsApp reminder for the given cita."""
     cid = UUID(cita_id)
     cita = _get_cita(cid)
 
     if cita is None:
-        logger.warning("Cita %s not found or deleted — skipping WhatsApp reminder", cita_id)
+        logger.warning(
+            "Cita %s not found or deleted — skipping WhatsApp reminder", cita_id
+        )
         return "skipped"
 
     if cita.estado in ("cancelada", "completada"):
@@ -112,22 +117,30 @@ def enviar_recordatorio_whatsapp(self, cita_id: str, anticipacion_horas: int) ->
     try:
         _send_whatsapp(cita.paciente.telefono_whatsapp, mensaje)
         _mark_recordatorio(cid, "whatsapp", anticipacion_horas, ok=True)
-        logger.info("WhatsApp reminder sent for cita %s (%dh)", cita_id, anticipacion_horas)
+        logger.info(
+            "WhatsApp reminder sent for cita %s (%dh)", cita_id, anticipacion_horas
+        )
         return "sent"
     except Exception as exc:
         logger.error("WhatsApp reminder failed for cita %s: %s", cita_id, exc)
-        _mark_recordatorio(cid, "whatsapp", anticipacion_horas, ok=False, error=str(exc))
+        _mark_recordatorio(
+            cid, "whatsapp", anticipacion_horas, ok=False, error=str(exc)
+        )
         raise self.retry(exc=exc, countdown=300)
 
 
-@shared_task(name="tasks.recordatorios.enviar_recordatorio_email", bind=True, max_retries=2)
+@shared_task(
+    name="tasks.recordatorios.enviar_recordatorio_email", bind=True, max_retries=2
+)
 def enviar_recordatorio_email(self, cita_id: str, anticipacion_horas: int) -> str:
     """Send an email reminder for the given cita."""
     cid = UUID(cita_id)
     cita = _get_cita(cid)
 
     if cita is None:
-        logger.warning("Cita %s not found or deleted — skipping email reminder", cita_id)
+        logger.warning(
+            "Cita %s not found or deleted — skipping email reminder", cita_id
+        )
         return "skipped"
 
     if cita.estado in ("cancelada", "completada"):
@@ -144,7 +157,9 @@ def enviar_recordatorio_email(self, cita_id: str, anticipacion_horas: int) -> st
     try:
         _send_email(cita.paciente.email, subject, mensaje)
         _mark_recordatorio(cid, "email", anticipacion_horas, ok=True)
-        logger.info("Email reminder sent for cita %s (%dh)", cita_id, anticipacion_horas)
+        logger.info(
+            "Email reminder sent for cita %s (%dh)", cita_id, anticipacion_horas
+        )
         return "sent"
     except Exception as exc:
         logger.error("Email reminder failed for cita %s: %s", cita_id, exc)

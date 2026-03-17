@@ -1,5 +1,6 @@
 """Auth endpoints — token issuance, refresh, logout."""
 
+from decouple import config as _env
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,6 +12,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _COOKIE_NAME = "refresh_token"
 _COOKIE_MAX_AGE = 7 * 24 * 3600  # 7 days in seconds
+_SECURE_COOKIE: bool = _env("SECURE_COOKIES", default=False, cast=bool)
 
 
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
@@ -18,7 +20,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         key=_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=False,  # True in production — controlled by SECURE_COOKIES env var
+        secure=_SECURE_COOKIE,
         samesite="strict",
         max_age=_COOKIE_MAX_AGE,
         path="/",
