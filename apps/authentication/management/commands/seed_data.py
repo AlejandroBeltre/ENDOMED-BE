@@ -6,26 +6,27 @@ Usage:
     python manage.py seed_data
     python manage.py seed_data --reset   # deletes existing seed data first
 """
+
 import uuid
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 # Fixed UUIDs so the JSON test cases below are stable
-SEDE_SD_ID   = uuid.UUID("11111111-0000-0000-0000-000000000001")
-SEDE_STG_ID  = uuid.UUID("11111111-0000-0000-0000-000000000002")
-SEDE_PP_ID   = uuid.UUID("11111111-0000-0000-0000-000000000003")
+SEDE_SD_ID = uuid.UUID("11111111-0000-0000-0000-000000000001")
+SEDE_STG_ID = uuid.UUID("11111111-0000-0000-0000-000000000002")
+SEDE_PP_ID = uuid.UUID("11111111-0000-0000-0000-000000000003")
 
-USER_DOC_ID  = uuid.UUID("22222222-0000-0000-0000-000000000001")
-USER_SEC_ID  = uuid.UUID("22222222-0000-0000-0000-000000000002")
+USER_DOC_ID = uuid.UUID("22222222-0000-0000-0000-000000000001")
+USER_SEC_ID = uuid.UUID("22222222-0000-0000-0000-000000000002")
 
-TC_CTRL_ID   = uuid.UUID("33333333-0000-0000-0000-000000000001")
-TC_NUEVO_ID  = uuid.UUID("33333333-0000-0000-0000-000000000002")
-TC_NUTRI_ID  = uuid.UUID("33333333-0000-0000-0000-000000000003")
+TC_CTRL_ID = uuid.UUID("33333333-0000-0000-0000-000000000001")
+TC_NUEVO_ID = uuid.UUID("33333333-0000-0000-0000-000000000002")
+TC_NUTRI_ID = uuid.UUID("33333333-0000-0000-0000-000000000003")
 
-PAC_1_ID     = uuid.UUID("44444444-0000-0000-0000-000000000001")
-PAC_2_ID     = uuid.UUID("44444444-0000-0000-0000-000000000002")
-PAC_3_ID     = uuid.UUID("44444444-0000-0000-0000-000000000003")
+PAC_1_ID = uuid.UUID("44444444-0000-0000-0000-000000000001")
+PAC_2_ID = uuid.UUID("44444444-0000-0000-0000-000000000002")
+PAC_3_ID = uuid.UUID("44444444-0000-0000-0000-000000000003")
 
 
 class Command(BaseCommand):
@@ -47,7 +48,9 @@ class Command(BaseCommand):
         if options["reset"]:
             self.stdout.write("Deleting existing seed data...")
             Paciente.objects.filter(id__in=[PAC_1_ID, PAC_2_ID, PAC_3_ID]).delete()
-            TipoConsulta.objects.filter(id__in=[TC_CTRL_ID, TC_NUEVO_ID, TC_NUTRI_ID]).delete()
+            TipoConsulta.objects.filter(
+                id__in=[TC_CTRL_ID, TC_NUEVO_ID, TC_NUTRI_ID]
+            ).delete()
             UserSede.objects.filter(user_id__in=[USER_DOC_ID, USER_SEC_ID]).delete()
             User.objects.filter(id__in=[USER_DOC_ID, USER_SEC_ID]).delete()
             Sede.objects.filter(id__in=[SEDE_SD_ID, SEDE_STG_ID, SEDE_PP_ID]).delete()
@@ -94,24 +97,47 @@ class Command(BaseCommand):
         else:
             secretaria = User.objects.get(id=USER_SEC_ID)
 
-        UserSede.objects.get_or_create(user=doctora,     sede=sede_sd,  defaults={"is_primary": True})
-        UserSede.objects.get_or_create(user=doctora,     sede=sede_stg, defaults={"is_primary": False})
-        UserSede.objects.get_or_create(user=doctora,     sede=sede_pp,  defaults={"is_primary": False})
-        UserSede.objects.get_or_create(user=secretaria,  sede=sede_sd,  defaults={"is_primary": True})
+        UserSede.objects.get_or_create(
+            user=doctora, sede=sede_sd, defaults={"is_primary": True}
+        )
+        UserSede.objects.get_or_create(
+            user=doctora, sede=sede_stg, defaults={"is_primary": False}
+        )
+        UserSede.objects.get_or_create(
+            user=doctora, sede=sede_pp, defaults={"is_primary": False}
+        )
+        UserSede.objects.get_or_create(
+            user=secretaria, sede=sede_sd, defaults={"is_primary": True}
+        )
         self.stdout.write(self.style.SUCCESS("OK Users created"))
 
         # ── Tipos de Consulta ─────────────────────────────────────────────────
         TipoConsulta.objects.get_or_create(
             id=TC_CTRL_ID,
-            defaults={"nombre": "Control Metabólico", "duracion_min": 30, "tarifa_rd": "2500.00", "color_hex": "#00B0B9"},
+            defaults={
+                "nombre": "Control Metabólico",
+                "duracion_min": 30,
+                "tarifa_rd": "2500.00",
+                "color_hex": "#00B0B9",
+            },
         )
         TipoConsulta.objects.get_or_create(
             id=TC_NUEVO_ID,
-            defaults={"nombre": "Consulta Nueva", "duracion_min": 60, "tarifa_rd": "4000.00", "color_hex": "#7C3AED"},
+            defaults={
+                "nombre": "Consulta Nueva",
+                "duracion_min": 60,
+                "tarifa_rd": "4000.00",
+                "color_hex": "#7C3AED",
+            },
         )
         TipoConsulta.objects.get_or_create(
             id=TC_NUTRI_ID,
-            defaults={"nombre": "Nutrición", "duracion_min": 45, "tarifa_rd": "3000.00", "color_hex": "#059669"},
+            defaults={
+                "nombre": "Nutrición",
+                "duracion_min": 45,
+                "tarifa_rd": "3000.00",
+                "color_hex": "#059669",
+            },
         )
         self.stdout.write(self.style.SUCCESS("OK Tipos de Consulta created"))
 

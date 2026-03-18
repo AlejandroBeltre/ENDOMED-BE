@@ -72,3 +72,40 @@ class Cita(models.Model):
 
     def __str__(self) -> str:
         return f"{self.paciente} — {self.fecha_hora:%d/%m/%Y %H:%M}"
+
+
+class Recordatorio(models.Model):
+    class Canal(models.TextChoices):
+        WHATSAPP = "whatsapp", "WhatsApp"
+        EMAIL = "email", "Email"
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        ENVIADO = "enviado", "Enviado"
+        FALLIDO = "fallido", "Fallido"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    cita = models.ForeignKey(
+        Cita, on_delete=models.CASCADE, related_name="recordatorios"
+    )
+    canal = models.CharField(max_length=20, choices=Canal.choices)
+    anticipacion_horas = models.PositiveSmallIntegerField()  # 24 or 2
+    estado = models.CharField(
+        max_length=20, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    enviado_at = models.DateTimeField(null=True, blank=True)
+    error_msg = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "recordatorios"
+        verbose_name = "Recordatorio"
+        verbose_name_plural = "Recordatorios"
+        indexes = [
+            models.Index(fields=["cita", "canal", "anticipacion_horas"]),
+            models.Index(fields=["estado"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.canal} {self.anticipacion_horas}h — {self.cita}"

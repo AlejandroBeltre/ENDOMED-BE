@@ -9,7 +9,16 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import agenda, auth, documentos, hce, pacientes
+from api.routers import (
+    agenda,
+    analitica,
+    auth,
+    documentos,
+    finanzas,
+    hce,
+    pacientes,
+    telemedicina,
+)
 
 _extra = os.environ.get("CORS_ALLOWED_ORIGINS", "")
 _origins = [o.strip() for o in _extra.split(",") if o.strip()]
@@ -36,11 +45,15 @@ app.include_router(agenda.router)
 app.include_router(pacientes.router)
 app.include_router(hce.router)
 app.include_router(documentos.router)
+app.include_router(finanzas.router)
+app.include_router(analitica.router)
+app.include_router(telemedicina.router)
 
 
 @app.get("/health/", tags=["system"])
 def health_check() -> dict:
     """Railway liveness probe — GET /api/health/"""
+    from django.core.cache import cache
     from django.db import connection
 
     try:
@@ -49,4 +62,10 @@ def health_check() -> dict:
     except Exception:
         db_status = "error"
 
-    return {"status": "ok", "db": db_status, "version": "0.2.0"}
+    try:
+        cache.set("_health", "1", 10)
+        redis_status = "ok" if cache.get("_health") == "1" else "error"
+    except Exception:
+        redis_status = "error"
+
+    return {"status": "ok", "db": db_status, "redis": redis_status, "version": "0.2.0"}

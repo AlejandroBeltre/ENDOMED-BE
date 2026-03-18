@@ -15,10 +15,11 @@ def connect_audit_signals() -> None:
 
     from apps.agenda.models import Cita
     from apps.documentos.models import DocumentoGenerado
+    from apps.finanzas.models import Factura, Pago
     from apps.hce.models import Consulta
     from apps.pacientes.models import Paciente
 
-    for model in [Cita, Paciente, Consulta, DocumentoGenerado]:
+    for model in [Cita, Paciente, Consulta, DocumentoGenerado, Factura, Pago]:
         post_save.connect(_audit_post_save, sender=model)
 
 
