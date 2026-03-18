@@ -16,8 +16,12 @@ app = Celery("endomed")
 # Use Django settings prefixed with CELERY_
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Auto-discover tasks in all installed apps and the top-level tasks/ package
-app.autodiscover_tasks(["tasks"])
+# Explicitly register task modules (autodiscover_tasks would look for tasks/tasks.py
+# which does not exist — our modules are tasks/reportes.py and tasks/recordatorios.py)
+app.conf.include = ["tasks.reportes", "tasks.recordatorios"]
+
+# Retain broker connection retry behaviour on startup (Celery 6 will drop the default)
+app.conf.broker_connection_retry_on_startup = True
 
 # ── Beat schedule ─────────────────────────────────────────────────────────────
 
