@@ -73,7 +73,7 @@ def _send_email(to: str, subject: str, body: str) -> None:
 
     sg = sendgrid.SendGridAPIClient(api_key=config("SENDGRID_API_KEY"))
     mail = Mail(
-        from_email=Email("noreply@endomed.app", "ENDOMED"),
+        from_email=Email(config("SENDGRID_FROM_EMAIL"), "ENDOMED"),
         to_emails=To(to),
         subject=subject,
         plain_text_content=Content("text/plain", body),
